@@ -1,0 +1,44 @@
+name: Expire Posts
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Log what would be deleted without deleting anything"
+        required: false
+        default: false
+        type: boolean
+      now:
+        description: "Optional ISO timestamp override for testing"
+        required: false
+        type: string
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: expire-posts
+  cancel-in-progress: false
+
+jobs:
+  expire-posts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Expire timed posts
+        env:
+          EXPIRY_BOT_TOKEN: ${{ secrets.EXPIRY_BOT_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          NOW_OVERRIDE: ${{ github.event.inputs.now || '' }}
+        run: node .github/scripts/expire-posts.mjs
